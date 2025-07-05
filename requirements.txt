@@ -1,0 +1,18 @@
+# Core dependencies for Speech-to-Text LLM Pipeline
+scipy
+sounddevice
+openai-whisper
+numpy
+requests
+psutil
+SpeechRecognition
+pyaudio
+flask
+
+# Optional for ChatGPT integration:
+# openai
+
+# Note: The following are automatically included as dependencies:
+# - torch (installed with openai-whisper)
+# - librosa (installed with openai-whisper) 
+# - typing (Python 3.5+ standard library)

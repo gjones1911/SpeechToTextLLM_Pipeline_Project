@@ -138,6 +138,7 @@ celerybeat.pid
 .env
 .envrc
 .venv
+.sttpipelinevenv
 env/
 venv/
 ENV/
