@@ -7,7 +7,9 @@ A robust, cross-platform Speech-to-Text (STT) pipeline designed for seamless int
 ## ✨ Key Features
 
 - **🎙️ Robust STT Engine**: OpenAI Whisper + Google Speech Recognition fallback
-- **🔗 API Integration**: Ready-to-use connections for Gradio and LM Studio APIs
+- **🔗 API Integration**: Ready-to-use connections for Gradio, LM Studio, and OpenAI APIs
+- **💭 Conversation History**: Optional conversation context maintenance across interactions
+- **🎛️ Dual Listening Modes**: Push-to-talk (SPACE key) and continuous voice detection
 - **🛡️ Memory Safety**: Comprehensive safeguards against memory allocation issues
 - **🌐 Cross-Platform**: Windows and Linux support
 - **🔄 Auto-Fallback**: Seamless switching between STT engines and API endpoints
@@ -81,6 +83,33 @@ SpeechToTextLLM_Pipeline_Project/
             └── test_complete_pipeline.py ⭐ Comprehensive test suite
 ```
 
+## 🏗️ Core Classes
+
+### TranscriberAgent (`code/transcriber_test_script.py`)
+**Primary interface for voice-to-LLM interaction** - integrates STT and LLM with flexible conversation management:
+
+- **🎙️ Dual Listening Modes**: Push-to-talk (SPACE) and continuous voice detection
+- **🤖 Multi-API Support**: Gradio, LM Studio, OpenAI-compatible endpoints  
+- **💭 Conversation History**: Optional context maintenance with interactive controls
+- **🔧 Configurable STT**: Auto-selection, Whisper, or Google Speech Recognition
+- **🧪 Test Integration**: Single-shot testing and interactive session modes
+
+### LLMAgent (`code/llm_agent_linux_package/llm_agent.py`)
+**Flexible LLM API client** with robust error handling and conversation management:
+
+- **🌐 Universal API Support**: Works with Gradio, LM Studio, OpenAI, and custom endpoints
+- **💭 History Management**: Optional conversation context with programmatic controls
+- **🔄 Auto-Retry**: Built-in retry logic with exponential backoff
+- **🛠️ Configurable**: Generation parameters, timeouts, and model selection
+- **📊 Health Monitoring**: Connection testing and performance metrics
+
+### MultiEngineSTT (`code/voice_processing/multi_engine_stt.py`)
+**Robust speech-to-text** with automatic fallback and memory safety:
+
+- **🎯 Auto-Fallback**: Whisper → Google Speech Recognition failover
+- **🛡️ Memory Safety**: Prevents memory allocation issues
+- **⚙️ Configurable**: Engine selection, audio parameters, and quality settings
+
 ## 🔧 Core Components
 
 ### 1. Voice-to-API Chatbot (`api_chatbot.py`)
@@ -113,7 +142,56 @@ Comprehensive validation system:
 
 ## 🎮 Usage Examples
 
-### Interactive Voice Chat
+### TranscriberAgent (Recommended)
+The primary interface for voice-to-LLM interaction with both push-to-talk and continuous listening modes:
+
+```bash
+# Basic usage with push-to-talk mode
+python test_transcriber_agent.py http://localhost:7860
+
+# Continuous listening mode
+python test_transcriber_agent.py http://localhost:1234 --soundmode continuous
+
+# LM Studio with conversation history disabled
+python test_transcriber_agent.py http://localhost:1234 --api-type lmstudio --no-history
+
+# Single test interaction
+python test_transcriber_agent.py http://localhost:7860 --test-only
+```
+
+**TranscriberAgent Features:**
+- **🎙️ Dual Listening Modes**: Push-to-talk (SPACE key) or continuous (voice detection)
+- **🤖 Multi-API Support**: Gradio, LM Studio, OpenAI-compatible endpoints
+- **💭 Conversation History**: Maintain context across interactions (optional)
+- **🔧 Configurable**: STT engine selection, recording duration, silence detection
+- **🧪 Test Mode**: Single interaction testing
+
+### Conversation History Management
+Control conversation context and memory across interactions:
+
+```bash
+# Enable conversation history (default)
+python test_transcriber_agent.py <url> --api-type lmstudio
+
+# Disable conversation history for fresh interactions
+python test_transcriber_agent.py <url> --api-type lmstudio --no-history
+
+# Interactive history controls during session:
+>>> history          # Check current status  
+>>> history on       # Enable conversation memory
+>>> history off      # Disable conversation memory
+>>> clear            # Clear conversation history
+>>> stats            # Show conversation statistics
+```
+
+**History Features:**
+- **🔧 Programmatic Control**: Set via command-line or code
+- **🎛️ Interactive Toggle**: Change during active sessions
+- **📊 Conversation Stats**: Message counts, roles, timing
+- **🗑️ Selective Clearing**: Reset without ending session
+- **🌐 Universal Support**: Works with all API types (Gradio, LM Studio, OpenAI)
+
+### Legacy Voice Chat
 ```bash
 python code/voice_processing/api_chatbot.py --mode interactive
 # Press Enter to record voice, type to send text, 'quit' to exit
@@ -263,4 +341,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Ready to add voice interaction to your applications!** 🎙️🤖 
+**Ready to add voice interaction to your applications!** 🎙️🤖

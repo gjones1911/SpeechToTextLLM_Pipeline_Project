@@ -1,0 +1,33 @@
+# Core API and Web Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+
+# HTTP and API Clients
+httpx>=0.25.0
+requests>=2.31.0
+openai>=1.3.0
+
+# Web Interface
+gradio>=4.8.0
+
+# LLM and AI Tools
+langchain>=0.0.350
+open-webui
+
+# Tunneling and Networking
+pyngrok>=7.0.0
+
+# Environment and Configuration
+python-dotenv>=1.0.0
+
+# Development and Jupyter
+ipykernel>=6.26.0
+
+# Optional: Additional Docker deployment dependencies
+redis>=5.0.0
+python-multipart>=0.0.6
+aiofiles>=23.2.0
+jinja2>=3.1.0
+watchdog>=3.0.0
+psutil>=5.9.0

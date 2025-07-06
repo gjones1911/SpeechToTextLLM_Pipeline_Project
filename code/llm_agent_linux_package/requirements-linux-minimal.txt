@@ -1,0 +1,19 @@
+# LLM Agent Remote Testing Requirements
+# Minimal requirements for testing LLM Agent on Linux systems
+
+# Core HTTP client for API communication
+requests>=2.31.0
+
+# Optional: For advanced LLM Agent features
+python-dotenv>=1.0.0
+
+# Optional: If using the full LLM Agent with advanced features
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+
+# Optional: For development and testing
+ipykernel>=6.26.0
+
+# Note: For basic LLM Agent testing, only 'requests' is strictly required
+# Uncomment other packages as needed for your specific use case

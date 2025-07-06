@@ -1,0 +1,21 @@
+LLM Agent Linux Testing Package
+===============================
+
+Created: Sun, Jul  6, 2025  4:09:44 AM
+ngrok URL: https://0987-2601-840-8702-17f0-3d62-8389-f210-1869.ngrok-free.app
+
+Files included:
+total 85
+drwxr-xr-x 1 gjone_narm4ce 197610     0 Jul  6 04:09 .
+drwxr-xr-x 1 gjone_narm4ce 197610     0 Jul  6 04:09 ..
+-rw-r--r-- 1 gjone_narm4ce 197610 23271 Jul  6 04:09 llm_agent.py
+-rw-r--r-- 1 gjone_narm4ce 197610     0 Jul  6 04:09 package_info.txt
+-rwxr-xr-x 1 gjone_narm4ce 197610  1112 Jul  6 04:09 quick_test.sh
+-rw-r--r-- 1 gjone_narm4ce 197610  4022 Jul  6 04:09 README.md
+-rwxr-xr-x 1 gjone_narm4ce 197610  8183 Jul  6 04:09 remote_llm_test.py
+-rw-r--r-- 1 gjone_narm4ce 197610   566 Jul  6 04:09 requirements.txt
+-rw-r--r-- 1 gjone_narm4ce 197610   575 Jul  6 04:09 requirements-linux-minimal.txt
+-rwxr-xr-x 1 gjone_narm4ce 197610  5434 Jul  6 04:09 setup_linux_venv.sh
+-rw-r--r-- 1 gjone_narm4ce 197610  9249 Jul  6 04:09 test_llm_agent_enhanced.py
+
+Package size: 69K
