@@ -18,11 +18,16 @@ TTS
 # Windows: pywin32 (for SAPI)
 # Linux/macOS: festival, espeak (system packages)
 
+# UI tools
+gradio
+ipykernel
+
+
 # Optional cloud TTS services:
 # azure-cognitiveservices-speech
 
 # Optional for ChatGPT integration:
-# openai
+openai
 
 # Note: The following are automatically included as dependencies:
 # - torch (installed with openai-whisper and TTS)
