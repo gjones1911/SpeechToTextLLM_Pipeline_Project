@@ -11,7 +11,7 @@ from code.transcriber_test_script import TranscriberAgent
 
 def test_history_options():
     """Test different history configurations"""
-    ngrok_url = "https://0987-2601-840-8702-17f0-3d62-8389-f210-1869.ngrok-free.app"
+    ngrok_url = "https://24be-174-161-24-253.ngrok-free.app"
     
     print("🧪 Testing history options...")
     

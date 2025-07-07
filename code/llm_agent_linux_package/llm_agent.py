@@ -155,6 +155,13 @@ class LLMAgent:
             "User-Agent": "LLMAgent/1.0"
         })
         
+        # Request configuration with SSL bypass for ngrok
+        self.request_kwargs = {
+            "verify": False,  # 🔑 Essential for ngrok SSL bypass
+            "headers": {"ngrok-skip-browser-warning": "any"},
+            "timeout": self.timeout
+        }
+        
         # Add ngrok-specific headers for LM Studio mode
         if self.api_type == "lmstudio":
             self.session.headers.update({
@@ -191,18 +198,22 @@ class LLMAgent:
         last_exception = None
         print("DEBUG: URL-> ", url)  # Debugging line to check URL
         print("DEBUG: Method-> ", method)  # Debugging line to check HTTP method
+        
+        # Merge request_kwargs with any additional kwargs
+        merged_kwargs = {**self.request_kwargs, **kwargs}
+        
         for attempt in range(self.max_retries):
             try:
                 if method.upper() not in ["GET", "POST", "PUT", "DELETE"]:
                     raise LLMAgentError(f"Unsupported HTTP method: {method}")
                 if method.upper() == "GET":
                     print("DEBUG: GET request detected")
-                    # Make the request
-                    response = self.session.get(url, timeout=self.timeout, **kwargs)
+                    # Make the request with SSL bypass
+                    response = self.session.get(url, **merged_kwargs)
                 else:
                     # For other methods, use the session request
                     print("DEBUG: POST request detected")
-                    response = self.session.post(url, timeout=self.timeout, json=kwargs.get('json', None))
+                    response = self.session.post(url, **merged_kwargs)
                 response.raise_for_status()
                 return response
             except requests.exceptions.RequestException as e:
@@ -578,6 +589,177 @@ class LLMAgent:
             "first_message_time": self.messages[0].timestamp if self.messages else None,
             "last_message_time": self.messages[-1].timestamp if self.messages else None
         }
+
+    # Enhanced API Methods for Model Management and Parameter Control
+    
+    def switch_model(self, model_id: str) -> Dict[str, Any]:
+        """
+        Switch to a different model
+        
+        Args:
+            model_id: ID of the model to switch to
+            
+        Returns:
+            Dictionary with success status and message
+        """
+        if self.api_type != "lmstudio":
+            return {"success": False, "error": "Model switching only supported for LM Studio"}
+        
+        try:
+            url = f"{self.base_url}/v1/models/manage"
+            data = {
+                "model_id": model_id,
+                "action": "switch"
+            }
+            
+            response = self._make_request_with_retry("POST", url, json=data)
+            
+            if response.status_code == 200:
+                logger.info(f"Successfully switched to model: {model_id}")
+                self.default_model = model_id
+                return {"success": True, "model": model_id, "message": "Model switched successfully"}
+            else:
+                error_msg = f"Failed to switch model: {response.status_code}"
+                logger.error(error_msg)
+                return {"success": False, "error": error_msg}
+                
+        except Exception as e:
+            error_msg = f"Error switching model: {str(e)}"
+            logger.error(error_msg)
+            return {"success": False, "error": error_msg}
+    
+    def adjust_parameters(self, **params) -> Dict[str, Any]:
+        """
+        Adjust generation parameters on the server
+        
+        Args:
+            **params: Parameters to adjust (max_tokens, temperature, etc.)
+            
+        Returns:
+            Dictionary with success status and message
+        """
+        if self.api_type != "lmstudio":
+            # For non-LM Studio APIs, just update local config
+            self.update_config(**params)
+            return {"success": True, "message": "Parameters updated locally", "params": params}
+        
+        try:
+            url = f"{self.base_url}/v1/parameters"
+            
+            response = self._make_request_with_retry("POST", url, json=params)
+            
+            if response.status_code == 200:
+                # Also update local config
+                self.update_config(**params)
+                logger.info(f"Successfully adjusted parameters: {params}")
+                return {"success": True, "message": "Parameters adjusted on server", "params": params}
+            else:
+                error_msg = f"Failed to adjust parameters: {response.status_code}"
+                logger.error(error_msg)
+                return {"success": False, "error": error_msg}
+                
+        except Exception as e:
+            error_msg = f"Error adjusting parameters: {str(e)}"
+            logger.error(error_msg)
+            return {"success": False, "error": error_msg}
+    
+    def get_current_parameters(self) -> Dict[str, Any]:
+        """
+        Get current generation parameters from the server
+        
+        Returns:
+            Dictionary with current parameters or error
+        """
+        if self.api_type != "lmstudio":
+            return {"success": True, "params": self.config.to_dict(), "source": "local"}
+        
+        try:
+            url = f"{self.base_url}/v1/parameters"
+            
+            response = self._make_request_with_retry("GET", url)
+            
+            if response.status_code == 200:
+                params = response.json()
+                logger.info("Successfully retrieved current parameters")
+                return {"success": True, "params": params, "source": "server"}
+            else:
+                error_msg = f"Failed to get parameters: {response.status_code}"
+                logger.error(error_msg)
+                return {"success": False, "error": error_msg}
+                
+        except Exception as e:
+            error_msg = f"Error getting parameters: {str(e)}"
+            logger.error(error_msg)
+            return {"success": False, "error": error_msg}
+    
+    def apply_preset(self, preset_name: str) -> Dict[str, Any]:
+        """
+        Apply a generation preset (creative, precise, balanced)
+        
+        Args:
+            preset_name: Name of preset ("creative", "precise", "balanced")
+            
+        Returns:
+            Dictionary with success status and message
+        """
+        if self.api_type != "lmstudio":
+            # For non-LM Studio APIs, apply local presets
+            presets = {
+                "creative": {"temperature": 0.9, "top_p": 0.95, "max_tokens": 1500},
+                "precise": {"temperature": 0.3, "top_p": 0.85, "max_tokens": 1000},
+                "balanced": {"temperature": 0.7, "top_p": 0.9, "max_tokens": 1200}
+            }
+            
+            if preset_name in presets:
+                self.update_config(**presets[preset_name])
+                return {"success": True, "preset": preset_name, "message": f"Applied {preset_name} preset locally"}
+            else:
+                return {"success": False, "error": f"Unknown preset: {preset_name}"}
+        
+        try:
+            url = f"{self.base_url}/v1/presets/{preset_name}/apply"
+            
+            response = self._make_request_with_retry("POST", url)
+            
+            if response.status_code == 200:
+                logger.info(f"Successfully applied preset: {preset_name}")
+                return {"success": True, "preset": preset_name, "message": f"Applied {preset_name} preset on server"}
+            else:
+                error_msg = f"Failed to apply preset: {response.status_code}"
+                logger.error(error_msg)
+                return {"success": False, "error": error_msg}
+                
+        except Exception as e:
+            error_msg = f"Error applying preset: {str(e)}"
+            logger.error(error_msg)
+            return {"success": False, "error": error_msg}
+    
+    def get_available_models(self) -> Dict[str, Any]:
+        """
+        Get list of available models
+        
+        Returns:
+            Dictionary with models list or error
+        """
+        try:
+            if not self.models_endpoint:
+                return {"success": False, "error": "Models endpoint not available for this API type"}
+            
+            response = self._make_request_with_retry("GET", self.models_endpoint)
+            
+            if response.status_code == 200:
+                models_data = response.json()
+                logger.info("Successfully retrieved available models")
+                return {"success": True, "models": models_data}
+            else:
+                error_msg = f"Failed to get models: {response.status_code}"
+                logger.error(error_msg)
+                return {"success": False, "error": error_msg}
+                
+        except Exception as e:
+            error_msg = f"Error getting models: {str(e)}"
+            logger.error(error_msg)
+            return {"success": False, "error": error_msg}
 
     def close(self) -> None:
         """Clean up resources"""

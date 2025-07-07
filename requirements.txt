@@ -9,10 +9,22 @@ SpeechRecognition
 pyaudio
 flask
 
+# Text-to-Speech dependencies
+gtts
+pygame
+TTS
+
+# Platform-specific TTS dependencies (install as needed):
+# Windows: pywin32 (for SAPI)
+# Linux/macOS: festival, espeak (system packages)
+
+# Optional cloud TTS services:
+# azure-cognitiveservices-speech
+
 # Optional for ChatGPT integration:
 # openai
 
 # Note: The following are automatically included as dependencies:
-# - torch (installed with openai-whisper)
+# - torch (installed with openai-whisper and TTS)
 # - librosa (installed with openai-whisper) 
 # - typing (Python 3.5+ standard library)

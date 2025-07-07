@@ -4,42 +4,15 @@ The core speech-to-text and API integration module for the Speech-to-Text LLM Pi
 
 ## 🎯 Module Overview
 
-This module provides the complete voice processing pipeline, from audio capture to chatbot API integration. It includes robust STT engines, API clients, and comprehensive testing tools.
+This module provides robust voice processing components used by the TranscriberAgent and legacy applications. It includes advanced STT engines, API testing tools, and comprehensive validation systems.
 
 ## 📁 Files
 
 ### 🎙️ Core Components
 
-#### **`api_chatbot.py`** ⭐ Main Application
+#### **`multi_engine_stt.py`** ⭐ Primary STT Engine
 
-**Purpose**: Complete voice-to-API chatbot system
-
-**Features**:
-
-- Voice input recording and transcription
-- Gradio and LM Studio API integration
-- Automatic fallback between APIs and STT engines
-- Interactive chat sessions and single queries
-- Comprehensive error handling and recovery
-
-**Usage**:
-
-```bash
-# Interactive voice chat with Gradio
-python api_chatbot.py --gradio-url "http://localhost:7860"
-
-# Single voice query with LM Studio
-python api_chatbot.py --lm-studio-url "http://localhost:1234" --mode single
-
-# Both APIs with fallback
-python api_chatbot.py \
-  --gradio-url "http://localhost:7860" \
-  --lm-studio-url "http://localhost:1234"
-```
-
-#### **`multi_engine_stt.py`** ⭐ STT Engine
-
-**Purpose**: Robust speech-to-text engine with automatic fallback
+**Purpose**: Robust speech-to-text engine with automatic fallback - **Used by TranscriberAgent**
 
 **Features**:
 
@@ -48,6 +21,7 @@ python api_chatbot.py \
 - Memory-safe audio processing (fixed 30GB memory bug)
 - Cross-platform audio recording
 - Automatic engine switching on failure
+- Integration with TranscriberAgent conversation system
 
 **Usage**:
 
@@ -57,6 +31,30 @@ from multi_engine_stt import MultiEngineSTT
 stt = MultiEngineSTT()
 text = stt.voice_to_text(duration=4.0)
 print(f"You said: {text}")
+```
+
+**Primary Integration**: Used by `TranscriberAgent` in `../transcriber_test_script.py`
+
+#### **`api_chatbot.py`** 📜 Legacy Application
+
+**Purpose**: Original voice-to-API chatbot system (superseded by TranscriberAgent)
+
+**Features**:
+
+- Voice input recording and transcription
+- Gradio and LM Studio API integration
+- Automatic fallback between APIs and STT engines
+- Interactive chat sessions and single queries
+- Comprehensive error handling and recovery
+
+**Note**: For new projects, use `TranscriberAgent` instead:
+
+```bash
+# Modern approach (recommended)
+python test_transcriber_agent.py <url> --api-type lmstudio
+
+# Legacy approach (still functional)
+python code/voice_processing/api_chatbot.py --lm-studio-url <url>
 ```
 
 ### 🧪 Development Tools

@@ -21,7 +21,7 @@ import logging
 # Add the code directory to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'code'))
 
-from code.transcriber_test_script import TranscriberAgent
+from transcriber_test_script import TranscriberAgent
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -112,9 +112,41 @@ History Options:
         action="store_true",
         help="Disable conversation history (shortcut for --maintain-history=False)"
     )
+    
+    parser.add_argument(
+        "--enable-tts",
+        action="store_true",
+        default=True,
+        help="Enable text-to-speech for LLM responses (default: True)"
+    )
+    
+    parser.add_argument(
+        "--disable-tts",
+        action="store_true",
+        help="Disable text-to-speech output"
+    )
+    
+    parser.add_argument(
+        "--tts-engine",
+        default="auto",
+        help="Preferred TTS engine (auto, sapi, espeak, gtts, etc.)"
+    )
 
     # Parse arguments
     args = parser.parse_args()
+    
+    # Validate URL format
+    if not validate_url(args.url):
+        print(f"❌ Invalid URL format: {args.url}")
+        print("   URL should start with http:// or https://")
+        return 1
+    
+    # Test connection to the API
+    print(f"🔍 Testing connection to {args.url}...")
+    if not test_connection(args.url, args.api_type):
+        print("⚠️  Warning: Connection test failed, but continuing anyway...")
+        print("   Make sure your API server is running!")
+    print()
     
     # Configure logging level
     if args.verbose:
@@ -132,12 +164,18 @@ History Options:
     # Determine maintain_history setting
     maintain_history = args.maintain_history and not args.no_history
     
+    # Determine TTS setting
+    enable_tts = not args.disable_tts and args.enable_tts
+    
     # Display configuration
     print("🎯 TranscriberAgent Test Configuration:")
     print(f"   URL: {args.url}")
     print(f"   Sound Mode: {args.soundmode} (maps to {listen_mode})")
     print(f"   API Type: {args.api_type}")
     print(f"   STT Engine: {args.stt_engine}")
+    print(f"   TTS Enabled: {enable_tts}")
+    if enable_tts:
+        print(f"   TTS Engine: {args.tts_engine}")
     print(f"   Duration: {args.duration}s")
     print(f"   Maintain History: {maintain_history}")
     print(f"   Test Only: {args.test_only}")
@@ -153,7 +191,8 @@ History Options:
             stt_engine=args.stt_engine,
             duration=args.duration,
             maintain_history=maintain_history,
-            enable_logging=args.verbose
+            enable_tts=enable_tts,
+            tts_engine=args.tts_engine
         )
         
         if args.test_only:
@@ -187,6 +226,7 @@ History Options:
             
             print("💡 Tip: Type 'quit' to exit, 'clear' to reset conversation")
             print("💡 Tip: Use 'history on/off' to toggle conversation history")
+            print("💡 Tip: Use 'tts on/off' to toggle text-to-speech")
             print("💡 Tip: Use 'stats' to see conversation statistics")
             print()
             
@@ -242,8 +282,15 @@ def test_connection(url: str, api_type: str = "gradio") -> bool:
     try:
         import requests
         
+        # SSL bypass configuration for ngrok
+        request_kwargs = {
+            "verify": False,  # 🔑 Essential for ngrok SSL bypass
+            "headers": {"ngrok-skip-browser-warning": "any"},
+            "timeout": 5
+        }
+        
         # Try to connect to the base URL
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, **request_kwargs)
         
         if response.status_code == 200:
             print(f"✅ Connection test successful: {url}")
@@ -258,21 +305,6 @@ def test_connection(url: str, api_type: str = "gradio") -> bool:
 
 
 if __name__ == "__main__":
-    # Quick connection test before running main
-    if len(sys.argv) > 1:
-        url = sys.argv[1]
-        
-        if not validate_url(url):
-            print(f"❌ Invalid URL format: {url}")
-            print("   URL should start with http:// or https://")
-            sys.exit(1)
-        
-        print(f"🔍 Testing connection to {url}...")
-        if not test_connection(url):
-            print("⚠️  Warning: Connection test failed, but continuing anyway...")
-            print("   Make sure your API server is running!")
-        print()
-    
     # Run main function
     exit_code = main()
     sys.exit(exit_code)

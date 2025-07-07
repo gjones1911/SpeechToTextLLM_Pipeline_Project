@@ -17,6 +17,16 @@ A robust, cross-platform Speech-to-Text (STT) pipeline designed for seamless int
 
 ## 🚀 Quick Start
 
+### 0. Update ngrok URL (If using ngrok)
+
+```bash
+# Automatically update all ngrok URLs in the project
+./update_ngrok_url.sh https://your-new-ngrok-url.ngrok-free.app
+
+# Or on Windows
+update_ngrok_url.bat https://your-new-ngrok-url.ngrok-free.app
+```
+
 ### 1. Setup Environment
 
 ```bash
@@ -32,7 +42,20 @@ bash activate_venv.sh
 pip install -r requirements.txt
 ```
 
-### 2. Test the System
+### 2. Basic Voice-to-LLM Chat
+
+```bash
+# Quick test with LM Studio (ngrok or local)
+python test_transcriber_agent.py https://your-ngrok-url.ngrok-free.app --api-type lmstudio --test-only
+
+# Interactive session with conversation history
+python test_transcriber_agent.py https://your-ngrok-url.ngrok-free.app --api-type lmstudio
+
+# Continuous listening mode (hands-free)
+python test_transcriber_agent.py https://your-ngrok-url.ngrok-free.app --api-type lmstudio --soundmode continuous
+```
+
+### 3. Legacy Testing
 
 ```bash
 # Start the test API server (in terminal 1)
@@ -42,7 +65,7 @@ python code/voice_processing/test_api_server.py
 python code/voice_processing/api_chatbot.py --gradio-url "http://localhost:7860"
 ```
 
-### 3. Use with Real APIs
+### 4. Advanced Usage
 
 ```bash
 # Gradio integration
@@ -190,6 +213,34 @@ python test_transcriber_agent.py <url> --api-type lmstudio --no-history
 - **📊 Conversation Stats**: Message counts, roles, timing
 - **🗑️ Selective Clearing**: Reset without ending session
 - **🌐 Universal Support**: Works with all API types (Gradio, LM Studio, OpenAI)
+
+### Text-to-Speech (TTS) Features
+Enhanced voice output with multi-engine support and interactive controls:
+
+```bash
+# Enable/disable TTS during session
+>>> tts on/off         # Toggle text-to-speech
+>>> tts test           # Test current TTS settings
+
+# Voice configuration
+>>> tts rate 200       # Set speech rate (50-400 WPM)
+>>> tts volume 0.8     # Set volume (0.0-1.0)
+>>> tts voice en-US-1  # Change voice (use 'tts voices' to see options)
+>>> tts engine sapi    # Switch TTS engine
+
+# Voice information
+>>> tts voices         # List available voices for all engines
+>>> tts config         # Show current TTS configuration
+>>> tts info           # Show detailed engine information
+```
+
+**TTS Features:**
+- **🎭 Multi-Engine Support**: Windows SAPI, Google TTS, eSpeak, Azure, Mozilla TTS
+- **🎤 Voice Selection**: Choose from system and online voices
+- **🔧 Real-time Configuration**: Adjust rate, volume, pitch during conversation
+- **🔄 Auto-Fallback**: Seamless switching between TTS engines
+- **🌐 Cross-Platform**: Works on Windows, Linux, and macOS
+- **💾 File Output**: Save speech to audio files (optional)
 
 ### Legacy Voice Chat
 ```bash

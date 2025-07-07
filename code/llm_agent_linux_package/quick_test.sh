@@ -5,13 +5,9 @@
 echo "🚀 Quick LLM Agent Test"
 echo "======================"
 
-NGROK_URL="https://0987-2601-840-8702-17f0-3d62-8389-f210-1869.ngrok-free.app"
+NGROK_URL="https://24be-174-161-24-253.ngrok-free.app"
 
-if [ "$NGROK_URL" = "https://0987-2601-840-8702-17f0-3d62-8389-f210-1869.ngrok-free.app" ]; then
-    echo "❌ Please update the ngrok URL in this script"
-    echo "   Edit this file and replace https://0987-2601-840-8702-17f0-3d62-8389-f210-1869.ngrok-free.app with your actual ngrok URL"
-    exit 1
-fi
+# URL is already set to current ngrok endpoint
 
 echo "🔗 Testing connection to: $NGROK_URL"
 

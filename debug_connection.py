@@ -16,7 +16,7 @@ def test_basic_connection():
         print("✅ LLMAgent import successful")
         
         # Test with ngrok URL
-        ngrok_url = "https://0987-2601-840-8702-17f0-3d62-8389-f210-1869.ngrok-free.app"
+        ngrok_url = "https://24be-174-161-24-253.ngrok-free.app"
         print(f"🌐 Testing connection to: {ngrok_url}")
         
         agent = LLMAgent(ngrok_url, api_type='lmstudio')
@@ -46,7 +46,7 @@ def test_transcriber_agent():
         from code.transcriber_test_script import TranscriberAgent
         print("✅ TranscriberAgent import successful")
         
-        ngrok_url = "https://0987-2601-840-8702-17f0-3d62-8389-f210-1869.ngrok-free.app"
+        ngrok_url = "https://24be-174-161-24-253.ngrok-free.app"
         
         # Create with minimal settings
         agent = TranscriberAgent(

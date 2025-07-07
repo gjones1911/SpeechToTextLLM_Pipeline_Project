@@ -39,11 +39,18 @@ class GradioAPI:
         self.base_url = base_url.rstrip('/')
         self.session = requests.Session()
         self.session.timeout = timeout
+        
+        # SSL bypass configuration for ngrok
+        self.request_kwargs = {
+            "verify": False,  # 🔑 Essential for ngrok SSL bypass
+            "headers": {"ngrok-skip-browser-warning": "any"},
+            "timeout": timeout
+        }
 
     def test_connection(self) -> bool:
         """Test if Gradio API is accessible"""
         try:
-            response = self.session.get(f"{self.base_url}/info", timeout=5)
+            response = self.session.get(f"{self.base_url}/info", **self.request_kwargs)
             if response.status_code == 200:
                 logger.info("✅ Gradio API connection successful")
                 return True
@@ -74,7 +81,7 @@ class GradioAPI:
             response = self.session.post(
                 f"{self.base_url}/api/predict",
                 json=payload,
-                timeout=30
+                **self.request_kwargs
             )
             
             if response.status_code == 200:
@@ -103,10 +110,17 @@ class LMStudioAPI:
         self.session = requests.Session()
         self.session.timeout = 30
         
+        # SSL bypass configuration for ngrok
+        self.request_kwargs = {
+            "verify": False,  # 🔑 Essential for ngrok SSL bypass
+            "headers": {"ngrok-skip-browser-warning": "any"},
+            "timeout": 30
+        }
+        
     def test_connection(self) -> bool:
         """Test if LM Studio API is accessible"""
         try:
-            response = self.session.get(f"{self.base_url}/v1/models", timeout=5)
+            response = self.session.get(f"{self.base_url}/v1/models", **self.request_kwargs)
             if response.status_code == 200:
                 models = response.json()
                 model_count = len(models.get('data', []))
@@ -145,7 +159,7 @@ class LMStudioAPI:
             response = self.session.post(
                 f"{self.base_url}/v1/chat/completions",
                 json=payload,
-                timeout=30
+                **self.request_kwargs
             )
             
             if response.status_code == 200:

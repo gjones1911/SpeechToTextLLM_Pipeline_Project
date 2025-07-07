@@ -41,6 +41,13 @@ class SimpleLLMAgent:
         self.config = GenerationConfig()
         self.session = requests.Session()
         
+        # SSL bypass configuration for ngrok
+        self.request_kwargs = {
+            "verify": False,  # 🔑 Essential for ngrok SSL bypass
+            "headers": {"ngrok-skip-browser-warning": "any"},
+            "timeout": self.timeout
+        }
+        
         # Set headers for ngrok
         self.session.headers.update({
             "Content-Type": "application/json",
@@ -63,7 +70,7 @@ class SimpleLLMAgent:
             models_url = f"{self.base_url}/v1/models"
             print(f"Testing models endpoint: {models_url}")
             
-            response = self.session.get(models_url, timeout=self.timeout)
+            response = self.session.get(models_url, **self.request_kwargs)
             response.raise_for_status()
             
             models_data = response.json()
@@ -89,7 +96,7 @@ class SimpleLLMAgent:
                 "temperature": 0.7
             }
             
-            response = self.session.post(chat_url, json=test_payload, timeout=self.timeout)
+            response = self.session.post(chat_url, json=test_payload, **self.request_kwargs)
             response.raise_for_status()
             
             chat_data = response.json()
@@ -124,7 +131,7 @@ class SimpleLLMAgent:
                 **self.config.to_dict()
             }
             
-            response = self.session.post(chat_url, json=payload, timeout=self.timeout)
+            response = self.session.post(chat_url, json=payload, **self.request_kwargs)
             response.raise_for_status()
             
             data = response.json()

@@ -13,7 +13,7 @@ from code.llm_agent_linux_package.llm_agent import LLMAgent
 def test_ngrok_connection():
     """Test connection to ngrok URL with maintain_history functionality"""
     
-    ngrok_url = "https://0987-2601-840-8702-17f0-3d62-8389-f210-1869.ngrok-free.app"
+    ngrok_url = "https://24be-174-161-24-253.ngrok-free.app"
     
     print("Testing ngrok connection and maintain_history functionality...")
     print(f"URL: {ngrok_url}")

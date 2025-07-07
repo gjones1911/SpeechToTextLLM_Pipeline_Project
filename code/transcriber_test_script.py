@@ -11,6 +11,7 @@ Usage:
 """
 
 from voice_processing.multi_engine_stt import MultiEngineSTT
+from voice_processing.multi_engine_tts import MultiEngineTTS
 from llm_agent_linux_package.llm_agent import LLMAgent
 
 import sys
@@ -46,6 +47,7 @@ class TranscriberAgent:
     - Automatic STT engine fallback (Whisper -> Google)
     - LLM API integration with configurable endpoints
     - Real-time audio processing and transcription
+    - Text-to-speech output for LLM responses
     """
     
     def __init__(self, 
@@ -57,6 +59,8 @@ class TranscriberAgent:
                  silence_threshold: float = 0.01,
                  silence_duration: float = 1.5,
                  maintain_history: bool = True,
+                 enable_tts: bool = True,
+                 tts_engine: str = "auto",
                  **llm_kwargs):
         """
         Initialize the TranscriberAgent
@@ -70,6 +74,8 @@ class TranscriberAgent:
             silence_threshold: Audio amplitude threshold for noise detection
             silence_duration: Silence duration to stop recording (noise detection)
             maintain_history: Whether to maintain conversation history
+            enable_tts: Whether to enable text-to-speech for responses
+            tts_engine: Preferred TTS engine ("auto", "sapi", "espeak", "gtts", etc.)
             **llm_kwargs: Additional arguments for LLMAgent
         """
         self.llm_url = llm_url
@@ -80,10 +86,24 @@ class TranscriberAgent:
         self.silence_threshold = silence_threshold
         self.silence_duration = silence_duration
         self.maintain_history = maintain_history
+        self.enable_tts = enable_tts
+        self.tts_engine = tts_engine
         
         # Initialize STT engine
         print("🎙️ Initializing Speech-to-Text engine...")
         self.audio_transcriber = MultiEngineSTT()
+        
+        # Initialize TTS engine if enabled
+        self.voice_synthesizer = None
+        if enable_tts:
+            try:
+                print("🔊 Initializing Text-to-Speech engine...")
+                self.voice_synthesizer = MultiEngineTTS(preferred_engine=tts_engine)
+                print("✅ TTS engine initialized successfully")
+            except Exception as e:
+                print(f"⚠️  TTS initialization failed: {e}")
+                print("   Continuing without TTS functionality")
+                self.enable_tts = False
         
         # Initialize LLM agent
         print(f"🤖 Initializing LLM Agent ({api_type}) at {llm_url}...")
@@ -110,6 +130,9 @@ class TranscriberAgent:
         print(f"   - Listen Mode: {listen_mode}")
         print(f"   - STT Engine: {stt_engine}")
         print(f"   - LLM API: {api_type} at {llm_url}")
+        print(f"   - TTS Enabled: {enable_tts}")
+        if enable_tts and self.voice_synthesizer:
+            print(f"   - TTS Engine: {self.voice_synthesizer.preferred_engine}")
         print(f"   - Recording Duration: {duration}s")
         if listen_mode == "noise_detection":
             print(f"   - Silence Threshold: {silence_threshold}")
@@ -321,6 +344,17 @@ class TranscriberAgent:
             
             if response and not response.startswith("Error"):
                 print(f"💬 LLM Response: {response}")
+                
+                # Speak the response if TTS is enabled
+                if self.enable_tts and self.voice_synthesizer:
+                    try:
+                        print("🔊 Speaking response...")
+                        tts_success = self.voice_synthesizer.speak(response)
+                        if not tts_success:
+                            print("⚠️  TTS failed, but response was successful")
+                    except Exception as e:
+                        print(f"⚠️  TTS error: {e}")
+                
                 return response
             else:
                 error_msg = f"❌ LLM error: {response}"
@@ -377,6 +411,21 @@ class TranscriberAgent:
         print("  - Type 'stats' to show conversation statistics")
         print("  - Type 'history' to check history status")
         print("  - Type 'history on/off' to toggle conversation history")
+        print("  - Type 'tts' to check TTS status")
+        print("  - Type 'tts on/off' to toggle text-to-speech")
+        print("  - Type 'tts test' to test TTS functionality")
+        print("  - Type 'tts voices' to list available voices")
+        print("  - Type 'tts config' to show TTS settings")
+        print("  - Type 'tts rate <number>' to set speech rate")
+        print("  - Type 'tts volume <0.0-1.0>' to set volume")
+        print("  - Type 'tts voice <id>' to change voice")
+        print("  - Type 'tts engine <name>' to switch TTS engine")
+        print("  - Type 'llm model <id>' to switch LLM model")
+        print("  - Type 'llm models' to list available models")
+        print("  - Type 'llm preset <name>' to apply preset (creative/precise/balanced)")
+        print("  - Type 'llm params' to show current parameters")
+        print("  - Type 'llm temp <value>' to set temperature")
+        print("  - Type 'llm tokens <number>' to set max tokens")
         
         if self.listen_mode == "push_to_talk":
             print("  - Hold SPACE to record voice input")
@@ -422,6 +471,151 @@ class TranscriberAgent:
                     elif user_input.lower() in ['history off', 'history_off']:
                         self.set_maintain_history(False)
                         continue
+                    elif user_input.lower() == 'tts':
+                        tts_status = "ON" if self.enable_tts else "OFF"
+                        tts_engine = self.voice_synthesizer.preferred_engine if self.voice_synthesizer else "None"
+                        print(f"🔊 Text-to-Speech: {tts_status} (Engine: {tts_engine})")
+                        continue
+                    elif user_input.lower() in ['tts on', 'tts_on']:
+                        self.toggle_tts() if not self.enable_tts else print("🔊 TTS already enabled")
+                        continue
+                    elif user_input.lower() in ['tts off', 'tts_off']:
+                        self.toggle_tts() if self.enable_tts else print("🔊 TTS already disabled")
+                        continue
+                    elif user_input.lower() in ['tts test', 'tts_test']:
+                        self.test_tts()
+                        continue
+                    elif user_input.lower() in ['tts voices', 'tts_voices']:
+                        voices = self.get_tts_voices()
+                        if voices:
+                            print("🎤 Available TTS voices:")
+                            for engine, voice_list in voices.items():
+                                print(f"  {engine}: {len(voice_list)} voices")
+                                for voice in voice_list[:3]:
+                                    print(f"    - {voice['name']} ({voice['id']})")
+                        else:
+                            print("❌ No TTS voices available")
+                        continue
+                    elif user_input.lower() in ['tts config', 'tts_config']:
+                        if self.voice_synthesizer:
+                            config = self.voice_synthesizer.current_config
+                            print("🔧 Current TTS configuration:")
+                            for key, value in config.items():
+                                print(f"    {key}: {value}")
+                        else:
+                            print("❌ TTS not available")
+                        continue
+                    elif user_input.lower().startswith('tts rate '):
+                        try:
+                            rate = int(user_input.split()[-1])
+                            self.set_tts_config(rate=rate)
+                        except ValueError:
+                            print("❌ Invalid rate value (use integer)")
+                        continue
+                    elif user_input.lower().startswith('tts volume '):
+                        try:
+                            volume = float(user_input.split()[-1])
+                            self.set_tts_config(volume=volume)
+                        except ValueError:
+                            print("❌ Invalid volume value (use 0.0-1.0)")
+                        continue
+                    elif user_input.lower().startswith('tts voice '):
+                        voice_id = ' '.join(user_input.split()[2:])  # Get everything after "tts voice "
+                        if voice_id:
+                            success = self.set_tts_config(voice=voice_id)
+                            if success:
+                                print(f"🎤 Voice changed to: {voice_id}")
+                                # Test the new voice
+                                self.test_tts(f"Hello, this is voice {voice_id}")
+                            else:
+                                print(f"❌ Failed to set voice to: {voice_id}")
+                        else:
+                            print("❌ Please specify a voice ID (use 'tts voices' to see available voices)")
+                        continue
+                    elif user_input.lower().startswith('tts engine '):
+                        engine_name = user_input.split()[-1]
+                        if self.voice_synthesizer and engine_name in self.voice_synthesizer.engines:
+                            self.voice_synthesizer.preferred_engine = engine_name
+                            print(f"🎯 Switched to {engine_name} TTS engine")
+                            # Test the new engine
+                            self.test_tts(f"Now using {engine_name} text to speech engine")
+                        else:
+                            available = list(self.voice_synthesizer.engines.keys()) if self.voice_synthesizer else []
+                            print(f"❌ Engine '{engine_name}' not available")
+                            print(f"Available engines: {available}")
+                        continue
+                    
+                    # LLM Management Commands
+                    elif user_input.lower().startswith('llm model '):
+                        model_id = ' '.join(user_input.split()[2:])
+                        if model_id:
+                            result = self.llm_agent.switch_model(model_id)
+                            if result["success"]:
+                                print(f"🤖 {result['message']}")
+                            else:
+                                print(f"❌ {result['error']}")
+                        else:
+                            print("❌ Please specify a model ID")
+                        continue
+                    elif user_input.lower() in ['llm models', 'models']:
+                        result = self.llm_agent.get_available_models()
+                        if result["success"]:
+                            models = result["models"]
+                            print("🤖 Available models:")
+                            if isinstance(models, dict) and "data" in models:
+                                for model in models["data"]:
+                                    print(f"  - {model.get('id', 'Unknown')}")
+                            elif isinstance(models, list):
+                                for model in models:
+                                    print(f"  - {model}")
+                            else:
+                                print(f"  Models: {models}")
+                        else:
+                            print(f"❌ {result['error']}")
+                        continue
+                    elif user_input.lower().startswith('llm preset '):
+                        preset = user_input.split()[-1]
+                        if preset in ['creative', 'precise', 'balanced']:
+                            result = self.llm_agent.apply_preset(preset)
+                            if result["success"]:
+                                print(f"🎯 {result['message']}")
+                            else:
+                                print(f"❌ {result['error']}")
+                        else:
+                            print("❌ Available presets: creative, precise, balanced")
+                        continue
+                    elif user_input.lower() in ['llm params', 'llm parameters']:
+                        result = self.llm_agent.get_current_parameters()
+                        if result["success"]:
+                            print("⚙️ Current LLM parameters:")
+                            for key, value in result["params"].items():
+                                print(f"    {key}: {value}")
+                            print(f"  Source: {result.get('source', 'unknown')}")
+                        else:
+                            print(f"❌ {result['error']}")
+                        continue
+                    elif user_input.lower().startswith('llm temp '):
+                        try:
+                            temp = float(user_input.split()[-1])
+                            result = self.llm_agent.adjust_parameters(temperature=temp)
+                            if result["success"]:
+                                print(f"🌡️ Temperature set to {temp}")
+                            else:
+                                print(f"❌ {result['error']}")
+                        except ValueError:
+                            print("❌ Invalid temperature value (use 0.0-2.0)")
+                        continue
+                    elif user_input.lower().startswith('llm tokens '):
+                        try:
+                            tokens = int(user_input.split()[-1])
+                            result = self.llm_agent.adjust_parameters(max_tokens=tokens)
+                            if result["success"]:
+                                print(f"📝 Max tokens set to {tokens}")
+                            else:
+                                print(f"❌ {result['error']}")
+                        except ValueError:
+                            print("❌ Invalid token value (use integer)")
+                        continue
                     elif user_input:
                         # Text input - send directly to LLM
                         response = self.send_to_llm(user_input)
@@ -461,6 +655,53 @@ class TranscriberAgent:
         self.llm_agent.close()
         print("🧹 Resources cleaned up")
 
+    def toggle_tts(self) -> bool:
+        """Toggle TTS on/off"""
+        if self.voice_synthesizer:
+            self.enable_tts = not self.enable_tts
+            print(f"🔊 TTS {'enabled' if self.enable_tts else 'disabled'}")
+            return self.enable_tts
+        else:
+            print("❌ TTS not available (initialization failed)")
+            return False
+    
+    def set_tts_config(self, **kwargs) -> bool:
+        """Configure TTS settings (rate, volume, pitch, voice)"""
+        if self.voice_synthesizer:
+            try:
+                self.voice_synthesizer.set_voice_config(**kwargs)
+                print(f"🔧 TTS configuration updated: {kwargs}")
+                return True
+            except Exception as e:
+                print(f"❌ TTS configuration failed: {e}")
+                return False
+        else:
+            print("❌ TTS not available")
+            return False
+    
+    def get_tts_voices(self) -> Dict[str, Any]:
+        """Get available TTS voices"""
+        if self.voice_synthesizer:
+            return self.voice_synthesizer.get_available_voices()
+        else:
+            return {}
+    
+    def test_tts(self, text: str = "This is a test of the text to speech system.") -> bool:
+        """Test TTS with sample text"""
+        if self.voice_synthesizer:
+            print(f"🔊 Testing TTS with: '{text}'")
+            return self.voice_synthesizer.speak(text)
+        else:
+            print("❌ TTS not available")
+            return False
+    
+    def get_tts_info(self) -> Dict[str, Any]:
+        """Get TTS engine information"""
+        if self.voice_synthesizer:
+            return self.voice_synthesizer.get_engine_info()
+        else:
+            return {"error": "TTS not available"}
+
     def get_maintain_history(self) -> bool:
         """Get current conversation history maintenance setting"""
         return self.maintain_history
@@ -498,9 +739,18 @@ def main():
     parser.add_argument("--listen-mode", default="push_to_talk", choices=["push_to_talk", "noise_detection"], help="Listening mode")
     parser.add_argument("--stt-engine", default="auto", choices=["auto", "whisper", "google"], help="STT engine preference")
     parser.add_argument("--duration", type=float, default=4.0, help="Recording duration for push-to-talk")
+    parser.add_argument("--enable-tts", action="store_true", default=True, help="Enable text-to-speech for responses")
+    parser.add_argument("--disable-tts", action="store_true", help="Disable text-to-speech")
+    parser.add_argument("--tts-engine", default="auto", help="Preferred TTS engine")
+    parser.add_argument("--maintain-history", action="store_true", default=True, help="Maintain conversation history")
+    parser.add_argument("--no-history", action="store_true", help="Disable conversation history")
     parser.add_argument("--test", action="store_true", help="Run quick test instead of interactive mode")
     
     args = parser.parse_args()
+    
+    # Handle TTS and history settings
+    enable_tts = not args.disable_tts and args.enable_tts
+    maintain_history = not args.no_history and args.maintain_history
     
     try:
         # Create TranscriberAgent
@@ -509,7 +759,10 @@ def main():
             api_type=args.api_type,
             listen_mode=args.listen_mode,
             stt_engine=args.stt_engine,
-            duration=args.duration
+            duration=args.duration,
+            enable_tts=enable_tts,
+            tts_engine=args.tts_engine,
+            maintain_history=maintain_history
         )
         
         if args.test:

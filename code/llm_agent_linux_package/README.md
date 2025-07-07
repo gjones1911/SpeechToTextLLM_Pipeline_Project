@@ -1,53 +1,93 @@
-# 🐧 LLM Agent Linux Testing Package
+# LLM Agent Package
 
-This package contains everything needed to test the LLM Agent on Linux systems connecting to a Windows machine running LM Studio.
+Flexible LLM API client with robust error handling, conversation management, and multi-provider support.
 
-## 📋 Current Configuration
+## 🎯 Overview
 
-**ngrok URL:** `https://0987-2601-840-8702-17f0-3d62-8389-f210-1869.ngrok-free.app`
+The LLM Agent package provides a unified interface for interacting with various Large Language Model APIs, including Gradio, LM Studio, OpenAI, and custom endpoints. It features conversation history management, automatic retry logic, and comprehensive error handling.
 
-## 🚀 Quick Start
+## � Files
 
-### 1. Setup Environment
-```bash
-# Make setup script executable
-chmod +x setup_linux_venv.sh
+### **`llm_agent.py`** ⭐ Main LLM Client
 
-# Run setup (creates virtual environment and installs dependencies)
-./setup_linux_venv.sh
+**Purpose**: Universal LLM API client with conversation management
+
+**Key Features**:
+- **🌐 Multi-Provider Support**: Gradio, LM Studio, OpenAI-compatible APIs
+- **💭 Conversation History**: Optional context management with interactive controls
+- **🔄 Auto-Retry Logic**: Exponential backoff for failed requests
+- **🛠️ Configurable Parameters**: Temperature, max tokens, model selection
+- **📊 Health Monitoring**: Connection testing and performance metrics
+- **🔧 Runtime Controls**: Enable/disable history, clear conversations, get stats
+
+**Basic Usage**:
+```python
+from llm_agent import LLMAgent
+
+# Create agent for LM Studio
+agent = LLMAgent("https://24be-174-161-24-253.ngrok-free.app", api_type="lmstudio")
+
+# Send message with history
+response = agent.send_message("Hello, how are you?")
+print(response)
+
+# Control conversation history
+agent.set_maintain_history(False)  # Disable history
+agent.clear_history()              # Clear conversation
+stats = agent.get_conversation_stats()  # Get statistics
 ```
 
-### 2. Activate Environment
-```bash
-# Navigate to project directory
-cd ~/llm_agent_remote
+**Conversation History Management**:
+```python
+# Enable/disable history
+agent = LLMAgent(url, maintain_history=True)   # Default: enabled
+agent = LLMAgent(url, maintain_history=False)  # Disable at creation
 
-# Activate virtual environment
-source venv/bin/activate
+# Runtime control
+agent.set_maintain_history(False)  # Disable during session
+agent.set_maintain_history(True)   # Re-enable during session
+
+# History operations
+agent.clear_history()                    # Clear conversation
+stats = agent.get_conversation_stats()   # Get message counts, timing
+history = agent.get_history()           # Export conversation
+agent.save_conversation("chat.json")    # Save to file
 ```
 
-### 3. Test Connection
-```bash
-# Simple test
-python remote_llm_test.py https://0987-2601-840-8702-17f0-3d62-8389-f210-1869.ngrok-free.app
+**Multi-Provider Examples**:
+```python
+# LM Studio (local or ngrok)
+lm_agent = LLMAgent("http://localhost:1234", api_type="lmstudio")
 
-# Enhanced test (if available)
-python test_llm_agent_enhanced.py
+# Gradio application
+gradio_agent = LLMAgent("http://localhost:7860", api_type="gradio")
+
+# OpenAI-compatible
+openai_agent = LLMAgent("https://api.openai.com", api_type="openai", api_key="your-key")
+
+# Custom endpoint
+custom_agent = LLMAgent("https://your-api.com", api_type="custom")
 ```
 
-## 📁 Package Contents
+### **`remote_llm_test.py`** 🧪 Remote Testing Tool
 
-- **`remote_llm_test.py`** - Simple test script for basic connection testing
-- **`llm_agent.py`** - Full LLM Agent class with all features
-- **`test_llm_agent_enhanced.py`** - Comprehensive test suite
-- **`requirements.txt`** - Full requirements for all features
-- **`requirements-linux-minimal.txt`** - Minimal requirements for basic testing
-- **`setup_linux_venv.sh`** - Automated setup script
-- **`README.md`** - This file
+**Purpose**: Simplified client for testing remote LM Studio via ngrok
 
-## 🔧 Manual Setup (Alternative)
+**Features**:
+- Lightweight testing without dependencies
+- Interactive chat sessions
+- Connection validation
+- ngrok-optimized headers
 
-If the automated setup doesn't work:
+**Usage**:
+```bash
+# Test remote LM Studio connection
+python remote_llm_test.py https://24be-174-161-24-253.ngrok-free.app
+
+# Interactive testing session
+python remote_llm_test.py https://24be-174-161-24-253.ngrok-free.app
+# Type messages, 'quit' to exit, 'config' to show settings
+```
 
 ```bash
 # Install Python 3 and pip (if not installed)
@@ -71,7 +111,7 @@ pip install -r requirements.txt
 
 ### Basic Connection Test
 ```bash
-python remote_llm_test.py https://0987-2601-840-8702-17f0-3d62-8389-f210-1869.ngrok-free.app
+python remote_llm_test.py https://24be-174-161-24-253.ngrok-free.app
 ```
 
 ### Using Full LLM Agent
@@ -79,7 +119,7 @@ python remote_llm_test.py https://0987-2601-840-8702-17f0-3d62-8389-f210-1869.ng
 from llm_agent import create_lmstudio_agent
 
 # Connect to remote LM Studio
-agent = create_lmstudio_agent('https://0987-2601-840-8702-17f0-3d62-8389-f210-1869.ngrok-free.app')
+agent = create_lmstudio_agent('https://24be-174-161-24-253.ngrok-free.app')
 
 # Test connection
 health = agent.get_health_status()
@@ -109,7 +149,7 @@ If you encounter SSL certificate errors:
 
 ```bash
 # For curl commands, use -k flag
-curl -k -H "ngrok-skip-browser-warning: true" "https://0987-2601-840-8702-17f0-3d62-8389-f210-1869.ngrok-free.app/v1/models"
+curl -k -H "ngrok-skip-browser-warning: true" "https://24be-174-161-24-253.ngrok-free.app/v1/models"
 
 # For Python, the scripts handle SSL verification automatically
 ```
@@ -137,19 +177,37 @@ curl -k -H "ngrok-skip-browser-warning: true" "https://0987-2601-840-8702-17f0-3
 
 If you encounter issues:
 1. Check the ngrok URL is still active
-2. Verify LM Studio is running on the Windows machine
-3. Test local connectivity first
-4. Check the troubleshooting section above
+## 🔧 Integration with TranscriberAgent
 
-## 🎉 Success Criteria
+The `LLMAgent` is primarily used by the `TranscriberAgent` for voice-to-text-to-LLM workflows:
 
-A successful test should show:
-- ✅ Connection to ngrok URL
-- ✅ Model list retrieval
-- ✅ Chat message exchange
-- ✅ Response time under 5 seconds
-- ✅ Stable connection for multiple messages
+```python
+from transcriber_test_script import TranscriberAgent
 
----
+# TranscriberAgent automatically uses LLMAgent internally
+agent = TranscriberAgent(
+    llm_url="https://24be-174-161-24-253.ngrok-free.app",
+    api_type="lmstudio",
+    maintain_history=True  # Passed through to LLMAgent
+)
 
-**Happy testing! 🌐🚀**
+# Interactive conversation with voice input and history management
+agent.interactive_mode()
+```
+
+## � New Features
+
+### Conversation History Management
+- **Programmatic Control**: Set via constructor or runtime methods
+- **Interactive Commands**: Toggle during active sessions  
+- **Statistics Tracking**: Message counts, timing, conversation length
+- **Persistence**: Save/load conversation history
+- **Universal Support**: Works with all API types
+
+### Enhanced Error Handling
+- **Automatic Model Fallback**: Uses "any" when no model specified (fixes LM Studio 500 errors)
+- **Retry Logic**: Exponential backoff for transient failures
+- **Connection Testing**: Validate API availability before use
+- **Health Monitoring**: Track response times and success rates
+
+For complete voice-to-LLM workflows, use the `TranscriberAgent` which integrates this package with speech recognition capabilities.
