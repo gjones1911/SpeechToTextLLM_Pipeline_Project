@@ -846,6 +846,7 @@ class HF_TranscriberAgent:
         self.enable_tts = enable_tts
         self.tts_engine = tts_engine
         
+        self.conversation = []
         # Initialize STT engine
         print("🎙️ Initializing Speech-to-Text engine...")
         self.audio_transcriber = MultiEngineSTT()
@@ -877,7 +878,8 @@ class HF_TranscriberAgent:
         self.is_recording = False
         self.audio_queue = queue.Queue()
         self.sample_rate = 16000
-        self.conversation = []
+        
+        
         print(f"🎯 TranscriberAgent initialized:")
         print(f"   - Listen Mode: {listen_mode}")
         print(f"   - STT Engine: {stt_engine}")
@@ -1173,6 +1175,7 @@ class HF_TranscriberAgent:
         print("  - Type 'llm temp <value>' to set temperature")
         print("  - Type 'llm tokens <number>' to set max tokens")
         return 
+    
     def interactive_mode(self):
         """
         Start interactive voice chat session.
@@ -1211,10 +1214,12 @@ class HF_TranscriberAgent:
                     # For push-to-talk, also check for keyboard input
                     if self.listen_mode == "push_to_talk":
                         print("Type a command or hold SPACE for voice input:")
+                    else:
+                        print("Start talking and when you stop I will respond!!!!")
                     
                     # Non-blocking input check (simplified approach)
                     user_input = input(">>> ").strip()
-                    
+
                     if user_input.lower() in ['quit', 'exit']:
                         print("👋 Goodbye!")
                         break

@@ -8,7 +8,8 @@ This module provides a reliable TTS pipeline that can fallback between:
 3. eSpeak (cross-platform, lightweight)
 4. Azure Speech Services (online, enterprise-grade)
 5. Google Text-to-Speech (online, high quality)
-6. OpenTTS/Mozilla TTS (local, neural voices)
+6. OpenTTS/Mozilla TTS (local, neural voices)  ***
+7. Elevenlabs (online, "high quality", not free!!!!!)
 
 Features:
 - Cross-platform engine detection and initialization
@@ -32,14 +33,68 @@ import threading
 from typing import Optional, Dict, Any, List, Tuple
 import warnings
 from pathlib import Path
+from TTS.api import TTS
+import torch
+from dotenv import dotenv_values
+import os
+import tempfile
+from pydub import AudioSegment
+import httpx
+
+# Check if a CUDA-compatible GPU is available
+gpu_available = torch.cuda.is_available()
+
+# PULL my environment variables (API keys so I can use them)
+config = dotenv_values("../env/env_config")
+
+# Set them as environment variables
+for key, value in config.items():
+    os.environ[key] = value
+
+# # Now you can access them via os.environ
+# print("ELEVEN_LABS_KEY: ", os.environ.get("ELEVEN_LABS_API_KEY"))
+
 
 # Suppress warnings for cleaner output
 warnings.filterwarnings("ignore", category=UserWarning)
 
+
+class ModelOptions:
+    mozilla_models = [
+        # 🗣️ Single-speaker English
+        "tts_models/en/ljspeech/tacotron2-DDC",
+        "tts_models/en/ljspeech/tacotron2-DDC_ph",
+        "tts_models/en/ljspeech/glow-tts",
+        "tts_models/en/ljspeech/vits",
+        "tts_models/en/ljspeech/fast_pitch",
+        "tts_models/en/jenny/jenny",  # lightweight, good for faster demos
+    
+        # 🧑‍🤝‍🧑 Multi-speaker English
+        "tts_models/en/vctk/vits",
+        "tts_models/en/vctk/tacotron2-DDC",
+        "tts_models/en/vctk/fast_pitch",
+        
+        # 🌍 Multilingual / Multi-speaker
+        "tts_models/multilingual/multi-dataset/your_tts",
+        "tts_models/multilingual/multi-dataset/xtts_v2",  # best for zero-shot speaker cloning
+        "tts_models/multilingual/multi-dataset/bark",     # bark TTS port (experimental)
+    
+        # 🌐 Other languages (examples)
+        "tts_models/de/thorsten/tacotron2-DCA",   # German
+        "tts_models/fr/siwis/glow-tts",           # French
+        "tts_models/es/mai/tacotron2-DDC",        # Spanish
+        "tts_models/ja/kokoro/tacotron2-DDC",     # Japanese
+    
+        # 🧪 Experimental / Niche
+        "tts_models/en/ljspeech/tacotron2-DDC-GST",  # with Global Style Tokens
+        "tts_models/en/ljspeech/transformer-TTS",
+    ]
+
+
 class MultiEngineTTS:
     """Text-to-Speech engine with multiple backend support"""
     
-    def __init__(self, preferred_engine: Optional[str] = None):
+    def __init__(self, preferred_engine: Optional[str] = None, model_selection=5, **kwargs):
         """
         Initialize TTS with automatic engine detection
         
@@ -57,7 +112,9 @@ class MultiEngineTTS:
             'voice': None     # Voice ID (None = default)
         }
         self.current_config = self.default_config.copy()
-        
+        self.model_options = ModelOptions()
+        self.selected_model = model_selection
+        self.output_file = ""
         print(f"🎭 Initializing MultiEngineTTS on {self.system_platform}")
         self._init_engines()
         
@@ -76,9 +133,11 @@ class MultiEngineTTS:
         
         # 3. Optional cloud engines
         self._init_azure_tts()
+        self._init_eleven_labs()
         
         # 4. Neural/Local engines
         self._init_mozilla_tts()
+        
         
         if not self.engines:
             raise RuntimeError("No TTS engines could be initialized!")
@@ -91,6 +150,8 @@ class MultiEngineTTS:
                 self.preferred_engine = 'espeak'
             elif 'gtts' in self.engines:
                 self.preferred_engine = 'gtts'
+            elif 'elevenlabs' in self.engines:
+                self.prefered_engine = 'elevenlabs'
             else:
                 self.preferred_engine = list(self.engines.keys())[0]
                 
@@ -99,6 +160,29 @@ class MultiEngineTTS:
         
         # Load available voices
         self._load_voices()
+
+    def get_elevenlabs_voices(self, ):
+        return ["Rachel", "Antoni", "Bella"]
+    
+    def _init_eleven_labs(self, ):
+        """Intialization for elven labs (API Key Required)"""
+        try:
+            from elevenlabs.client import ElevenLabs
+            import simpleaudio as sa
+            
+
+            self.engines["elevenlabs"] = {
+                # create client as generation engine
+                'engine': ElevenLabs(api_key=os.environ.get("ELEVEN_LABS_API_KEY"), timeout=httpx.Timeout(60.0)),
+                'simpleaudio': sa, # used to store audio file
+                'type': 'online',
+                'model': "eleven_monolingual_v1", 
+                'voice': self.get_elevenlabs_voices()[0]
+            }
+            print("✅ Eleven Labs engine initialized")
+        except Exception as e:
+            print(f"⚠️ Eleven Labs initialization failed: {e}")
+        return
     
     def _init_sapi(self):
         """Initialize Windows SAPI engine"""
@@ -222,10 +306,16 @@ class MultiEngineTTS:
         try:
             import TTS
             from TTS.api import TTS as TTSEngine
-            
+            mozzilla_models = []
             # Try to load a lightweight model
-            tts_engine = TTSEngine(model_name="tts_models/en/ljspeech/tacotron2-DDC", 
-                                 progress_bar=False)
+            selected_model = self.model_options.mozilla_models[self.selected_model]
+            print(f"using model: {selected_model}")
+            print(f"GPU?: {gpu_available}")
+            tts_engine = TTSEngine(
+                                   # model_name="tts_models/en/ljspeech/tacotron2-DDC", 
+                                   model_name=selected_model,
+                                   gpu=gpu_available,
+                                   progress_bar=True)
             
             self.engines['mozilla'] = {
                 'type': 'neural',
@@ -512,6 +602,33 @@ class MultiEngineTTS:
         except Exception as e:
             print(f"❌ gTTS speech failed: {e}")
             return False
+
+    def speak_with_elevenlabs(self, text: str, output_file: Optional[str] = None) -> bool:
+        if 'elevenlabs' not in self.engines:
+            raise RuntimeError("Eleven labs engine not available")
+        try:
+            client = self.engines['elevenlabs']['engine']
+            sa = self.engines['elevenlabs']['simpleaudio']
+            audio = client.generate(
+                text = text,
+                voice=self.engines['elevenlabs']['voice'],
+                model=self.engines['elevenlabs']['model']
+            )
+            try:
+                wave_obj = sa.WaveObject.from_wave_file("output.wav")
+                wave_obj.play()
+            except Exception as ex:
+                print(f"❌ Could use player for Eleven Labs TTS speech: {ex}")
+                print("Falling back on file method")
+                self.output_file = output_file
+                with open(self.output_file) as f:
+                    f.write(audio)
+                
+            return True
+        except Exception as ex:
+            print(f"❌ Eleven Labs TTS speech failed: {ex}")
+            return False
+            
     
     def speak_with_azure(self, text: str, output_file: Optional[str] = None) -> bool:
         """Speak text using Azure Speech Services"""
@@ -521,7 +638,7 @@ class MultiEngineTTS:
         try:
             speechsdk = self.engines['azure']['module']
             speech_config = self.engines['azure']['config']
-            
+            self.output_file = output_file
             # Configure synthesis
             if output_file:
                 audio_config = speechsdk.audio.AudioOutputConfig(filename=output_file)
@@ -645,6 +762,62 @@ class MultiEngineTTS:
         
         return chunks
 
+
+    def process_text_to_speech_elevenlabs(self, text: str, output_file: str = 'tts_output.mp3', max_chunk_size: int = 400) -> str:
+        chunks = self._chunk_text(text, max_chunk_size=max_chunk_size)
+        audio_segments = []
+    
+        for i, chunk in enumerate(chunks):
+            audio_gen = self.engines['elevenlabs']['engine'].text_to_speech.convert(
+                text=chunk,
+                voice_id="21m00Tcm4TlvDq8ikWAM",  # Customize as needed
+                model_id=self.engines['elevenlabs']['model'],
+                output_format="mp3_44100_128",
+            )
+            audio_bytes = b"".join(audio_gen)
+            audio_segments.append(audio_bytes)
+    
+        final_audio = b"".join(audio_segments)
+        temp_path = os.path.join(tempfile.gettempdir(), output_file)
+    
+        with open(temp_path, "wb") as f:
+            f.write(final_audio)
+    
+        return temp_path
+
+
+    def process_text_to_speech_mozilla(self, text: str, output_file: str = 'tts_output.wav', max_chunk_size: int = 400) -> str:
+        chunks = self._chunk_text(text, max_chunk_size=max_chunk_size)
+        combined_path = os.path.join(tempfile.gettempdir(), output_file)
+        print(f"Chunks: {len(chunks)}")
+        combined_audio = AudioSegment.empty()
+    
+        for i, chunk in enumerate(chunks):
+            temp_chunk_path = os.path.join(tempfile.gettempdir(), f"mozilla_chunk_{i}.wav")
+            self.engines['mozilla']['engine'].tts_to_file(text=chunk, file_path=temp_chunk_path)
+    
+            segment = AudioSegment.from_wav(temp_chunk_path)
+            combined_audio += segment
+    
+        combined_audio.export(combined_path, format="wav")
+    
+        return combined_path
+
+  
+    def process_and_speak(self, text: str, engine: str=None, output_file: str='tts_output.wav', chunk_size=400):
+        if engine is None:
+            engine = self.prefered_engine
+        if engine in self.engines:
+            if engine == "mozilla":
+                print("using mozilla")
+                return self.process_text_to_speech_mozilla(text, output_file=output_file, max_chunk_size=chunk_size)
+            elif engine == "elevenlabs":
+                print("using elevenlabs")
+                return self.process_text_to_speech_elevenlabs(text, output_file=output_file, max_chunk_size=chunk_size)
+        else:
+            print(f"No viable engine chosen: {engine}")
+            return False
+ 
     def speak(self, text: str, engine: Optional[str] = None, output_file: Optional[str] = None, chunk_size: int = 1000) -> bool:
         """
         Speak text using the best available engine with fallback and chunking
@@ -726,7 +899,11 @@ class MultiEngineTTS:
                 elif engine_name == 'azure':
                     success = self.speak_with_azure(text, output_file)
                 elif engine_name == 'mozilla':
+                    print("Speaking with mozilla")
                     success = self.speak_with_mozilla(text, output_file)
+                elif engine_name == 'elevenlabs':
+                    print("Speaking with elevenlabs")
+                    success = self.speak_with_elevenlabs(text, output_file)
                 
                 if success:
                     after_memory = self._get_memory_usage()
@@ -745,7 +922,7 @@ class MultiEngineTTS:
         print("❌ All TTS engines failed for this chunk")
         return False
     
-    def test_engines(self) -> Dict[str, bool]:
+    def test_engines(self, output_file: Optional[str]="outfile.mp3") -> Dict[str, bool]:
         """Test all available engines with a simple phrase"""
         
         test_text = "Hello, this is a test of the text to speech engine."
@@ -757,7 +934,7 @@ class MultiEngineTTS:
         for engine_name in self.engines.keys():
             print(f"\n🎯 Testing {engine_name}...")
             try:
-                success = self.speak(test_text, engine=engine_name)
+                success = self.speak(test_text, engine=engine_name, output_file=output_file)
                 results[engine_name] = success
                 
                 if success:

@@ -24,15 +24,22 @@ import gc
 import psutil
 from typing import Optional, Tuple, Dict, Any
 import warnings
+import whisper
 
 # Suppress warnings for cleaner output
 warnings.filterwarnings("ignore", category=UserWarning)
+
+
+class STT_MODEL_OPTIONS:
+    WHISPER_OPTIONS = {
+        "models": ["tiny", "base", "medium", "large", "turbo"],
+    }
 
 class MultiEngineSTT:
     """Speech-to-Text engine with multiple backend support"""
     
     def __init__(self):
-        self.engines = {}
+        self.engines = {}  # used to track and list valid STT engines available
         self.preferred_engine = None
         self._init_engines()
         
@@ -94,6 +101,38 @@ class MultiEngineSTT:
         """Get current memory usage in MB"""
         process = psutil.Process()
         return process.memory_info().rss / 1024 / 1024
+
+    def transcribe_from_mike_and_clean_whisper(self, audio_path):
+        if not audio_path or not os.path.exists(audio_path):
+            return "⚠️ No valid recording found.", None
+    
+        # Transcribe
+        result = self.engines['whisper'].transcribe(audio_path)
+        text = result["text"]
+    
+        # Cleanup
+        try:
+            os.remove(audio_path)
+            print(f"🧹 Deleted temp file: {audio_path}")
+        except Exception as e:
+            print(f"⚠️ Could not delete file: {e}")
+        print(f"Returning text: {text}")
+        return text, None
+    
+    # Function to transcribe uploaded audio file
+    def transcribe_from_mike_whisper(self, audio_path):
+        if audio_path is None:
+            return "❌ No file provided."
+        
+        print(f"🔍 Transcribing: {audio_path}")
+        result = self.engines['whisper'].transcribe(audio_path)
+        print(f"\n\nresult: {result}\n\n")
+        try:
+            os.remove(audio_path)
+            print(f"🧹 Deleted file: {audio_path}")
+        except Exception as e:
+            print(f"⚠️ Could not delete audio: {e}")
+        return result["text"]
     
     def record_audio(self, duration: float = 5.0, sample_rate: int = 16000) -> np.ndarray:
         """

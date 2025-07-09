@@ -144,7 +144,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-
+*.mp3
 # Spyder project settings
 .spyderproject
 .spyproject

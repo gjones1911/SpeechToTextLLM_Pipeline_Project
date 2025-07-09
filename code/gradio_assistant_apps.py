@@ -14,6 +14,9 @@ import getpass
 home_dir = os.path.expanduser("~")
 print(f"My home directory: {home_dir}")
 
+def get_home_directory():
+    return os.path.expanduser("~")
+
 # 2. Compose the default user cache path
 user_gradio_cache = os.path.join(home_dir, "gradio_cache")
 
@@ -93,7 +96,9 @@ LLM_LIST = [
     f"{home_dir}/shared_space/models/MODELS/Llama_3p1_8B_Instruct/",
     f"{home_dir}/shared_space/models/MODELS/Llama_3p2_3B_Instruct/",
 ]
-
+LLM_MODEL_MAP = {
+        
+}
 # JavaScript for Auto-Scroll
 js_code = """
 function autoScroll() {
